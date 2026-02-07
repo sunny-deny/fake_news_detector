@@ -1,14 +1,236 @@
-# -fake-news-detector
+# AI Fake News Detector
 
+An end-to-end machine learning project for detecting fake news using a
+fine-tuned DistilBERT model.
 
+------------------------------------------------------------------------
 
-\## Baseline training
+## Overview
 
+This project covers:
 
+-   Data cleaning and preprocessing\
+-   Dataset inspection\
+-   Transformer model training\
+-   Validation and test evaluation\
+-   Reproducible project structure\
+-   Git-based workflow
 
-```powershell
+------------------------------------------------------------------------
 
-python -m src.fakey.models.train --epochs 1 --batch\_size 8 --max\_length 256
+## Project Structure
 
+    fake-news-detector/
+    │
+    ├── data/
+    │   ├── raw/          # Original dataset (ignored)
+    │   └── processed/    # Cleaned + split data (ignored)
+    │
+    ├── scripts/
+    │   ├── clean_data.py     # Data cleaning and splitting
+    │   └── inspect_data.py   # Dataset inspection
+    │
+    ├── src/
+    │   └── fakey/
+    │       └── models/
+    │           ├── train.py     # Model training
+    │           └── evaluate.py  # Test evaluation
+    │
+    ├── models/        # Trained artifacts (ignored)
+    ├── notebooks/     # Optional analysis notebooks
+    ├── tests/         # Future tests
+    │
+    ├── requirements.txt
+    ├── .gitignore
+    └── README.md
 
+------------------------------------------------------------------------
 
+## Requirements
+
+-   Python 3.10+
+
+Install dependencies:
+
+``` powershell
+pip install -r requirements.txt
+```
+
+Main libraries:
+
+-   pandas\
+-   numpy\
+-   scikit-learn\
+-   transformers\
+-   torch\
+-   accelerate\
+-   datasets\
+-   tqdm\
+-   jupyter
+
+------------------------------------------------------------------------
+
+## Dataset
+
+This project uses the WELFake / Kaggle fake news dataset.
+
+Place the raw CSV file in:
+
+    data/raw/WELFake_Dataset.csv
+
+This file is ignored by Git.
+
+------------------------------------------------------------------------
+
+## Data Cleaning and Splitting
+
+Clean, deduplicate, cap length, and split the dataset:
+
+``` bash
+python scripts/clean_data.py
+```
+
+Output:
+
+    data/processed/
+    ├── welfake_clean.csv
+    ├── train.csv
+    ├── val.csv
+    └── test.csv
+
+Features:
+
+-   Removes duplicates\
+-   Drops missing text\
+-   Combines title + article\
+-   Caps max length\
+-   Stratified train/val/test split
+
+------------------------------------------------------------------------
+
+## Dataset Inspection
+
+Check data quality and statistics:
+
+``` bash
+python scripts/inspect_data.py
+```
+
+Outputs:
+
+-   Shape\
+-   Label distribution\
+-   Length statistics\
+-   Random samples
+
+------------------------------------------------------------------------
+
+## Model Training
+
+Baseline model: DistilBERT
+
+Train on CPU:
+
+``` bash
+python src/fakey/models/train.py --epochs 1 --batch_size 8 --max_length 256
+```
+
+Faster run (recommended for CPU):
+
+``` bash
+python src/fakey/models/train.py --epochs 1 --batch_size 8 --max_length 128
+```
+
+Outputs:
+
+    models/baseline/
+    ├── model.safetensors
+    ├── config.json
+    ├── tokenizer.json
+    ├── tokenizer_config.json
+    └── metrics.json
+
+------------------------------------------------------------------------
+
+## Test Evaluation
+
+Evaluate on the held-out test set:
+
+``` bash
+python src/fakey/models/evaluate.py \
+  --model_dir models/baseline \
+  --test_path data/processed/test.csv \
+  --max_length 256 \
+  --batch_size 16
+```
+
+Results are printed and saved to:
+
+    models/baseline/test_metrics.json
+
+------------------------------------------------------------------------
+
+## Baseline Results
+
+Validation (after 1 epoch):
+
+-   Accuracy: \~99.35%\
+-   F1: \~99.29%
+
+Test set:
+
+-   Accuracy: \~99.19%\
+-   Precision: \~98.99%\
+-   Recall: \~99.23%\
+-   F1: \~99.11%
+
+These results show strong generalization on WELFake.
+
+------------------------------------------------------------------------
+
+## Git Workflow
+
+Branches:
+
+-   main -- stable releases\
+-   dev -- integration\
+-   feat/\* -- features
+
+Workflow:
+
+    feat/* → dev → main
+
+Artifacts and datasets are ignored. Only source code is tracked.
+
+------------------------------------------------------------------------
+
+## Reproducibility
+
+All experiments are reproducible using:
+
+-   requirements.txt\
+-   clean_data.py\
+-   train.py\
+-   evaluate.py
+
+No trained models or raw data are committed.
+
+------------------------------------------------------------------------
+
+## Future Work
+
+Planned extensions:
+
+-   FastAPI backend\
+-   Web frontend\
+-   User query database\
+-   Feedback-based retraining\
+-   Experiment tracking\
+-   GPU training\
+-   Model optimization
+
+------------------------------------------------------------------------
+
+## Author
+
+Built as a portfolio project for applied NLP and ML engineering.
