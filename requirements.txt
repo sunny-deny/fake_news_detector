@@ -1,8 +1,10 @@
 pandas
 numpy
 scikit-learn
-transformers
-torch
+transformers>=5.0.0
+accelerate>=1.1.0
 datasets
+torch
 tqdm
 jupyter
+
