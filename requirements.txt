@@ -10,4 +10,10 @@ jupyter
 fastapi
 uvicorn
 pydantic
-
+sqlalchemy
+asyncpg
+alembic
+slowapi
+python-dotenv
+httpx
+pytest
