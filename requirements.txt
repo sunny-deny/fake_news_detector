@@ -7,4 +7,7 @@ datasets
 torch
 tqdm
 jupyter
+fastapi
+uvicorn
+pydantic
 
