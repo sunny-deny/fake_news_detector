@@ -188,6 +188,35 @@ These results show strong generalization on WELFake.
 
 ------------------------------------------------------------------------
 
+
+## GPU Training (Google Colab)
+
+For faster training, this project supports GPU-accelerated training using
+Google Colab.
+
+A ready-to-use notebook is provided:
+
+    notebooks/02_colab_training.ipynb
+
+Features:
+
+-   Runs on Tesla T4 GPU (or similar)
+-   ~20× faster than local CPU training
+-   Reproducible environment setup
+-   Automatic model and metrics export
+
+Workflow:
+
+1. Open the notebook in Google Colab
+2. Enable GPU runtime
+3. Upload train/val/test CSV files
+4. Run all cells
+5. Download trained artifacts
+
+This enables full cloud-based training without local hardware requirements.
+
+------------------------------------------------------------------------
+
 ## Git Workflow
 
 Branches:
