@@ -3,6 +3,8 @@ Database models for the Fake News Detector API.
 """
 from sqlalchemy import Column, Integer, String, Float, DateTime, Text, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
+from sqlalchemy import UniqueConstraint
+
 from datetime import datetime
 from .database import Base
 
@@ -37,6 +39,8 @@ class Feedback(Base):
     Allows users to report if the prediction was correct or incorrect.
     """
     __tablename__ = "feedbacks"
+    __table_args__ = (UniqueConstraint("analysis_id", name="uq_feedback_analysis_id"),)
+
 
     id = Column(Integer, primary_key=True, index=True)
     analysis_id = Column(Integer, ForeignKey("analyses.id"), nullable=False, index=True)

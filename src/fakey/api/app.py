@@ -19,9 +19,24 @@ import torch
 from fastapi import FastAPI, Depends, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi import Query
+
 from sqlalchemy.orm import Session
 from sqlalchemy import func
+from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
+
+
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
+
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+from slowapi import _rate_limit_exceeded_handler
+
+from .security import sanitize_text
+
 
 from .database import get_db, init_db, engine
 from .models import Analysis, Feedback, ModelMetrics
@@ -33,7 +48,14 @@ from .schemas import (
 # Configuration
 MODEL_DIR = os.getenv("MODEL_DIR", "models/baseline")
 MAX_LENGTH = int(os.getenv("MAX_LENGTH", "256"))
-CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:5173").split(",")
+CORS_ORIGINS = [o.strip() for o in os.getenv("CORS_ORIGINS", "").split(",") if o.strip()]
+RATE_LIMIT_ANALYZE = os.getenv("RATE_LIMIT_ANALYZE", "10/minute")
+RATE_LIMIT_FEEDBACK = os.getenv("RATE_LIMIT_FEEDBACK", "20/minute")
+RATE_LIMIT_HEALTH = os.getenv("RATE_LIMIT_HEALTH", "60/minute")
+RATE_LIMIT_HISTORY = os.getenv("RATE_LIMIT_HISTORY", "30/minute")
+RATE_LIMIT_STATS = os.getenv("RATE_LIMIT_STATS", "30/minute")
+
+limiter = Limiter(key_func=get_remote_address)
 
 # Logging configuration
 logging.basicConfig(
@@ -51,6 +73,11 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
+
+
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
@@ -67,7 +94,7 @@ model: Optional[AutoModelForSequenceClassification] = None
 
 # Exception handlers
 @app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
+def global_exception_handler(request: Request, exc: Exception):
     logger.error(f"Unhandled exception: {exc}", exc_info=True)
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -77,7 +104,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 # Startup and shutdown events
 @app.on_event("startup")
-async def startup_event():
+def startup_event():
     """Load ML model and initialize database on startup."""
     global tokenizer, model
     
@@ -102,7 +129,7 @@ async def startup_event():
 
 
 @app.on_event("shutdown")
-async def shutdown_event():
+def shutdown_event():
     """Cleanup on shutdown."""
     logger.info("Shutting down...")
 
@@ -110,7 +137,7 @@ async def shutdown_event():
 # API Endpoints
 
 @app.get("/", tags=["Root"])
-async def root():
+def root():
     """Root endpoint with API information."""
     return {
         "name": "Fake News Detector API",
@@ -128,14 +155,15 @@ async def root():
 
 
 @app.get("/health", response_model=HealthResponse, tags=["Health"])
-async def health_check(db: Session = Depends(get_db)):
+@limiter.limit(RATE_LIMIT_HEALTH)
+def health_check(request:Request, db: Session = Depends(get_db)):
     """
     Health check endpoint.
     Returns API status, model info, and database connection status.
     """
     try:
         # Check database connection
-        db.execute("SELECT 1")
+        db.execute(text("SELECT 1"))
         db_connected = True
         
         # Get total predictions count
@@ -156,66 +184,50 @@ async def health_check(db: Session = Depends(get_db)):
 
 
 @app.post("/analyze", response_model=AnalyzeResponse, tags=["Analysis"])
-async def analyze_news(
-    request: Request,
-    req: AnalyzeRequest,
-    db: Session = Depends(get_db)
-):
-    """
-    Analyze news text for fake news detection.
-    
-    Returns:
-    - label: 0 (FAKE) or 1 (REAL)
-    - score: confidence score (0-1)
-    - confidence: High/Medium/Low
-    """
+@limiter.limit(RATE_LIMIT_ANALYZE)
+def analyze_news(request: Request, req: AnalyzeRequest, db: Session = Depends(get_db)):
     if tokenizer is None or model is None:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Model not loaded"
-        )
-    
+        raise HTTPException(status_code=503, detail="Model not loaded")
+
+    clean = sanitize_text(req.text, max_chars=10000)
+    if not clean:
+        raise HTTPException(status_code=400, detail="Empty input after sanitization")
+
     try:
-        # Tokenize input
         enc = tokenizer(
-            req.text,
+            clean,
             truncation=True,
             padding="max_length",
             max_length=MAX_LENGTH,
             return_tensors="pt",
         )
-        
-        # Get prediction
+
         with torch.no_grad():
             out = model(**enc)
             probs = torch.softmax(out.logits, dim=1).squeeze(0)
-            score = float(probs[1].item())  # Probability of REAL
+            score = float(probs[1].item())
             label = int(torch.argmax(probs).item())
-        
-        # Determine confidence level
-        max_prob = float(max(probs).item())
+
+        max_prob = float(torch.max(probs).item())
         if max_prob > 0.8:
             confidence = "High"
         elif max_prob > 0.6:
             confidence = "Medium"
         else:
             confidence = "Low"
-        
-        # Save to database
+
         analysis = Analysis(
-            text=req.text,
+            text=clean,
             label=label,
             score=score,
             model_dir=MODEL_DIR,
             max_length=MAX_LENGTH,
-            ip_address=request.client.host if request.client else None
+            ip_address=request.client.host if request.client else None,
         )
         db.add(analysis)
         db.commit()
         db.refresh(analysis)
-        
-        logger.info(f"Analysis {analysis.id}: label={label}, score={score:.3f}, confidence={confidence}")
-        
+
         return AnalyzeResponse(
             id=analysis.id,
             label=label,
@@ -223,69 +235,58 @@ async def analyze_news(
             score=score,
             confidence=confidence,
             model_dir=MODEL_DIR,
-            created_at=analysis.created_at
-        )
-        
-    except Exception as e:
-        logger.error(f"Error during analysis: {e}", exc_info=True)
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Analysis failed: {str(e)}"
+            created_at=analysis.created_at,
         )
 
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error during analysis: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Analysis failed")
 
 @app.post("/feedback", response_model=FeedbackResponse, tags=["Feedback"])
-async def submit_feedback(req: FeedbackRequest, db: Session = Depends(get_db)):
-    """
-    Submit feedback on a prediction.
-    
-    Allows users to report if the prediction was correct or incorrect.
-    """
-    # Check if analysis exists
+@limiter.limit(RATE_LIMIT_FEEDBACK)
+def submit_feedback(request: Request, req: FeedbackRequest, db: Session = Depends(get_db)):
     analysis = db.query(Analysis).filter(Analysis.id == req.analysis_id).first()
     if not analysis:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Analysis with id {req.analysis_id} not found"
-        )
-    
+        raise HTTPException(status_code=404, detail=f"Analysis with id {req.analysis_id} not found")
+
+    existing = db.query(Feedback).filter(Feedback.analysis_id == req.analysis_id).first()
+    if existing:
+        raise HTTPException(status_code=409, detail="Feedback already submitted for this analysis")
+
     try:
-        # Update analysis with user feedback
         analysis.user_feedback = req.feedback_type
-        
-        # Create feedback record
+
+        comment = sanitize_text(req.comment or "", max_chars=1000) or None
+
         feedback = Feedback(
             analysis_id=req.analysis_id,
             feedback_type=req.feedback_type,
-            comment=req.comment
+            comment=comment,
         )
         db.add(feedback)
         db.commit()
         db.refresh(feedback)
-        
-        logger.info(f"Feedback received for analysis {req.analysis_id}: {req.feedback_type}")
-        
-        return FeedbackResponse(
-            message="Feedback submitted successfully",
-            feedback_id=feedback.id
-        )
-        
-    except Exception as e:
-        logger.error(f"Error submitting feedback: {e}", exc_info=True)
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to submit feedback: {str(e)}"
-        )
 
+        return FeedbackResponse(message="Feedback submitted successfully", feedback_id=feedback.id)
+
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Feedback already submitted for this analysis")
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error submitting feedback: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to submit feedback")
 
 @app.get("/history", response_model=HistoryResponse, tags=["History"])
-async def get_history(
-    limit: int = 50,
-    offset: int = 0,
-    db: Session = Depends(get_db)
-):
+@limiter.limit(RATE_LIMIT_HISTORY)
+def get_history(request: Request, limit: int = Query(50, ge=1, le=100), offset: int = Query(0, ge=0), db: Session = Depends(get_db)):
     """
     Get analysis history.
     
@@ -300,7 +301,6 @@ async def get_history(
             db.query(Analysis)
             .order_by(Analysis.created_at.desc())
             .offset(offset)
-            .limit(min(limit, 100))  # Cap at 100 items
             .all()
         )
         
@@ -338,7 +338,9 @@ async def get_history(
 
 
 @app.get("/stats", response_model=StatsResponse, tags=["Statistics"])
-async def get_statistics(db: Session = Depends(get_db)):
+@limiter.limit(RATE_LIMIT_STATS)
+def get_statistics(request: Request, db: Session = Depends(get_db)):
+
     """
     Get overall statistics.
     
@@ -387,7 +389,7 @@ async def get_statistics(db: Session = Depends(get_db)):
 
 
 @app.delete("/history/{analysis_id}", tags=["History"])
-async def delete_analysis(analysis_id: int, db: Session = Depends(get_db)):
+def delete_analysis(analysis_id: int, db: Session = Depends(get_db)):
     """
     Delete a specific analysis (and associated feedback).
     """

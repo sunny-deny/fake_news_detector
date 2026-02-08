@@ -1,20 +1,21 @@
 """
 Pydantic schemas for request/response validation.
 """
-from pydantic import BaseModel, Field, validator
 from typing import Optional, List
 from datetime import datetime
+from pydantic import BaseModel, Field, field_validator
 
 
 class AnalyzeRequest(BaseModel):
-    """Request schema for news analysis."""
-    text: str = Field(..., min_length=10, max_length=10000, description="News text to analyze")
-    
-    @validator('text')
-    def text_must_not_be_empty(cls, v):
-        if not v or not v.strip():
-            raise ValueError('Text cannot be empty or whitespace only')
-        return v.strip()
+    text: str = Field(..., min_length=10, max_length=10000)
+
+    @field_validator("text")
+    @classmethod
+    def text_must_not_be_empty(cls, v: str):
+        v = (v or "").strip()
+        if not v:
+            raise ValueError("Text cannot be empty or whitespace only")
+        return v
 
 
 class AnalyzeResponse(BaseModel):
@@ -32,14 +33,14 @@ class AnalyzeResponse(BaseModel):
 
 
 class FeedbackRequest(BaseModel):
-    """Request schema for submitting feedback."""
-    analysis_id: int = Field(..., gt=0, description="ID of the analysis to provide feedback on")
-    feedback_type: str = Field(..., description="Type of feedback: 'correct' or 'incorrect'")
-    comment: Optional[str] = Field(None, max_length=1000, description="Optional comment")
-    
-    @validator('feedback_type')
-    def feedback_type_must_be_valid(cls, v):
-        if v not in ['correct', 'incorrect']:
+    analysis_id: int = Field(..., gt=0)
+    feedback_type: str
+    comment: Optional[str] = Field(None, max_length=1000)
+
+    @field_validator("feedback_type")
+    @classmethod
+    def feedback_type_must_be_valid(cls, v: str):
+        if v not in ["correct", "incorrect"]:
             raise ValueError('Feedback type must be either "correct" or "incorrect"')
         return v
 
