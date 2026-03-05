@@ -219,18 +219,16 @@ No trained models or raw data are committed.
 
 ## Future Work
 
-Planned extensions:
+This project is **still under active development**. Planned improvements include:
 
--   FastAPI backend\
--   Web frontend\
--   User query database\
--   Feedback-based retraining\
--   Experiment tracking\
--   GPU training\
--   Model optimization
+- React web frontend for user interaction
+- User authentication and accounts
+- Model explainability (e.g., SHAP or LIME)
+- Experiment tracking for training runs
+- Feedback-based model retraining
+- CI/CD pipeline with automated testing and deployment
+- Containerized cloud deployment
+- Application monitoring and logging
+- Model optimization for faster inference
 
-------------------------------------------------------------------------
 
-## Author
-
-Built as a portfolio project for applied NLP and ML engineering.
