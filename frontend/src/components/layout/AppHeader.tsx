@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { History, Shield } from "lucide-react";
+import { History, SearchCheck } from "lucide-react";
 
 const navItems = [
   { label: "Analyze", to: "/" },
@@ -14,7 +14,7 @@ export default function AppHeader() {
       <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-6">
         <Link to="/" className="group flex items-center gap-2.5">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-primary/20 bg-primary/10 transition-all group-hover:glow-primary">
-            <Shield className="h-5 w-5 text-primary" />
+            <SearchCheck className="h-5 w-5 text-primary" />
           </div>
 
           <span className="text-lg font-semibold tracking-tight text-foreground">
