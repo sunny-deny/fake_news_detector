@@ -32,12 +32,19 @@ const HANDLE_LEN = 68;
 const HANDLE_W = 9;
 const BORDER_W = 10;
 const ANIM_DURATION = 14000;
+const SAFE_PAD = 120;
+const SCENE_OFFSET_X = 36;
+const SCENE_OFFSET_Y = 0;
 
 const easeInOutQuart = (t: number) =>
   t < 0.5 ? 8 * t * t * t * t : 1 - Math.pow(-2 * t + 2, 4) / 2;
 
 function lerp(a: number, b: number, t: number) {
   return a + (b - a) * t;
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
 }
 
 export default function MagnifierSearch() {
@@ -48,8 +55,8 @@ export default function MagnifierSearch() {
 
   const getCardCenter = useCallback(
     (card: Card, W: number, H: number): Vec2 => ({
-      x: (card.x / 100) * W,
-      y: (card.y / 100) * H,
+      x: (card.x / 100) * W + SCENE_OFFSET_X,
+      y: (card.y / 100) * H + SCENE_OFFSET_Y,
     }),
     [],
   );
@@ -93,8 +100,11 @@ export default function MagnifierSearch() {
         eased = easeInOutQuart((localT - 0.25) / 0.5);
       }
 
-      const lensX = lerp(fromPos.x, toPos.x, eased);
-      const lensY = lerp(fromPos.y, toPos.y, eased);
+      let lensX = lerp(fromPos.x, toPos.x, eased);
+      let lensY = lerp(fromPos.y, toPos.y, eased);
+
+      lensX = clamp(lensX, SAFE_PAD, W - SAFE_PAD);
+      lensY = clamp(lensY, SAFE_PAD, H - SAFE_PAD);
 
       const dx = toPos.x - fromPos.x;
       const dy = toPos.y - fromPos.y;
@@ -107,10 +117,9 @@ export default function MagnifierSearch() {
 
       ctx.clearRect(0, 0, W, H);
 
-
       CARDS.forEach((card) => {
-        const cx = (card.x / 100) * W;
-        const cy = (card.y / 100) * H;
+        const cx = (card.x / 100) * W + SCENE_OFFSET_X;
+        const cy = (card.y / 100) * H + SCENE_OFFSET_Y;
         const x = cx - card.w / 2;
         const y = cy - card.h / 2;
         drawCard(ctx, x, y, card.w, card.h, card.lines, false);
@@ -125,8 +134,8 @@ export default function MagnifierSearch() {
       ctx.fillRect(0, 0, W, H);
 
       CARDS.forEach((card) => {
-        const cx = (card.x / 100) * W;
-        const cy = (card.y / 100) * H;
+        const cx = (card.x / 100) * W + SCENE_OFFSET_X;
+        const cy = (card.y / 100) * H + SCENE_OFFSET_Y;
         const x = cx - card.w / 2;
         const y = cy - card.h / 2;
         drawCard(ctx, x, y, card.w, card.h, card.lines, true);
@@ -262,10 +271,7 @@ export default function MagnifierSearch() {
   }, [draw]);
 
   return (
-    <div
-      ref={containerRef}
-      className="relative h-full w-full overflow-hidden rounded-[28px]"
-    >
+    <div ref={containerRef} className="relative h-full w-full overflow-hidden rounded-[28px]">
       <canvas ref={canvasRef} className="block h-full w-full" />
     </div>
   );
@@ -283,13 +289,14 @@ function drawCard(
   const r = 8;
 
   ctx.save();
-  ctx.shadowColor = dark ? "rgba(0,0,0,0.6)" : "rgba(0,0,0,0.18)";
+  ctx.shadowColor = dark ? "rgba(255,40,60,0.25)" : "rgba(0,0,0,0.25)";
   ctx.shadowBlur = dark ? 12 : 8;
   ctx.shadowOffsetX = 2;
   ctx.shadowOffsetY = 3;
 
   roundRect(ctx, x, y, w, h, r);
-  ctx.fillStyle = dark ? "#140f1f" : "#2f3a4a";  ctx.fill();
+  ctx.fillStyle = dark ? "#140f1f" : "#2f3a4a";
+  ctx.fill();
   ctx.restore();
 
   roundRect(ctx, x, y, w, h, r);
@@ -308,10 +315,14 @@ function drawCard(
     const lh = lineH * 0.32;
     roundRect(ctx, lx, ly, lw, lh, lh / 2);
     ctx.fillStyle = dark
-      ? (i === 0 ? "rgba(255,70,80,0.9)" : "rgba(255,70,80,0.5)")
-      : (i === 0 ? "rgba(255,255,255,0.6)" : "rgba(255,255,255,0.28)");
-        ctx.fill();
-      });
+      ? i === 0
+        ? "rgba(255,70,80,0.9)"
+        : "rgba(255,70,80,0.5)"
+      : i === 0
+        ? "rgba(255,255,255,0.6)"
+        : "rgba(255,255,255,0.28)";
+    ctx.fill();
+  });
 }
 
 function roundRect(
