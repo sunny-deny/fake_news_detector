@@ -18,7 +18,7 @@ export default function AppHeader() {
           </div>
 
           <span className="text-lg font-semibold tracking-tight text-foreground">
-            Veri<span className="text-primary">Check</span>
+            Truth<span className="text-primary">Lens</span>
           </span>
         </Link>
 

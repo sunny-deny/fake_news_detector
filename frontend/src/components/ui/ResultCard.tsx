@@ -1,6 +1,6 @@
 import { ThumbsUp, ThumbsDown, AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
-import { AnalysisResult, setFeedback } from "@/lib/store";
-
+import { setFeedback } from "@/features/analysis/store";
+import { AnalysisResult } from "@/features/analysis/types";
 const labelConfig = {
   "Likely Real": {
     icon: CheckCircle2,
@@ -22,7 +22,7 @@ const labelConfig = {
   },
 };
 
-const ResultCard = ({ result }: { result: AnalysisResult }) => {
+export default function ResultCard({ result }: { result: AnalysisResult }) {
   const config = labelConfig[result.label];
   const Icon = config.icon;
 
@@ -33,6 +33,7 @@ const ResultCard = ({ result }: { result: AnalysisResult }) => {
           <Icon className="w-4 h-4" />
           {result.label}
         </div>
+
         <div className="text-right">
           <span className="text-2xl font-bold font-mono text-foreground">{result.score}%</span>
           <p className="text-xs text-muted-foreground mt-0.5">confidence</p>
@@ -54,8 +55,10 @@ const ResultCard = ({ result }: { result: AnalysisResult }) => {
         <span className="text-xs text-muted-foreground font-mono">
           {result.timestamp.toLocaleString()}
         </span>
+
         <div className="flex items-center gap-1">
           <span className="text-xs text-muted-foreground mr-2">Helpful?</span>
+
           <button
             onClick={() => setFeedback(result.id, "up")}
             className={`p-2 rounded-lg transition-colors ${
@@ -66,6 +69,7 @@ const ResultCard = ({ result }: { result: AnalysisResult }) => {
           >
             <ThumbsUp className="w-4 h-4" />
           </button>
+
           <button
             onClick={() => setFeedback(result.id, "down")}
             className={`p-2 rounded-lg transition-colors ${
@@ -80,6 +84,4 @@ const ResultCard = ({ result }: { result: AnalysisResult }) => {
       </div>
     </div>
   );
-};
-
-export default ResultCard;
+}

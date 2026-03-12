@@ -1,38 +1,52 @@
 import { Clock, Inbox } from "lucide-react";
-import { useSyncExternalStore } from "react";
 import PageShell from "@/components/layout/PageShell";
-import ResultCard from "@/components/ResultCard";
-import { getHistory, subscribe } from "@/lib/store";
+import ResultCard from "@/components/ui/ResultCard";
+import { AnalysisResult } from "@/features/analysis/types";
+
+const mockHistory: AnalysisResult[] = [
+  {
+    id: "1",
+    label: "Likely Fake",
+    score: 92,
+    text: "Breaking: miracle cure discovered overnight with zero side effects.",
+    timestamp: new Date(),
+    feedback: null,
+  },
+  {
+    id: "2",
+    label: "Likely Real",
+    score: 84,
+    text: "City council approves new public transit expansion after final review.",
+    timestamp: new Date(),
+    feedback: null,
+  },
+];
 
 export default function HistoryPage() {
-  const history = useSyncExternalStore(subscribe, getHistory);
-
   return (
-    <PageShell className="mx-auto w-full max-w-2xl px-6 py-12">
+    <PageShell className="mx-auto w-full max-w-3xl px-6 py-12">
       <section className="mb-8 flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-primary/20 bg-primary/10">
-          <Clock className="h-5 w-5 text-primary" />
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <Clock className="h-5 w-5" />
         </div>
 
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Analysis History</h1>
-          <p className="text-sm text-muted-foreground">
-            {history.length} {history.length === 1 ? "result" : "results"}
-          </p>
+          <h1 className="text-2xl font-bold">Analysis History</h1>
+          <p className="text-sm text-muted-foreground">{mockHistory.length} saved results</p>
         </div>
       </section>
 
-      {history.length === 0 ? (
-        <section className="space-y-4 py-20 text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-secondary">
+      {mockHistory.length === 0 ? (
+        <section className="py-20 text-center">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-secondary">
             <Inbox className="h-7 w-7 text-muted-foreground" />
           </div>
-          <p className="text-muted-foreground">No analyses yet. Go analyze some text!</p>
+          <p className="text-muted-foreground">No analyses yet.</p>
         </section>
       ) : (
         <section className="space-y-4">
-          {history.map((result) => (
-            <ResultCard key={result.id} result={result} />
+          {mockHistory.map((item) => (
+            <ResultCard key={item.id} result={item} />
           ))}
         </section>
       )}

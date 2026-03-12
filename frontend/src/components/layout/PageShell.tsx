@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import AppHeader from "@/components/layout/AppHeader";
+import AppHeader from "./AppHeader";
 
 interface PageShellProps {
   children: ReactNode;
