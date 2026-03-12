@@ -301,6 +301,7 @@ def get_history(request: Request, limit: int = Query(50, ge=1, le=100), offset: 
             db.query(Analysis)
             .order_by(Analysis.created_at.desc())
             .offset(offset)
+            .limit(limit)
             .all()
         )
         

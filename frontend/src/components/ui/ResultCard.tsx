@@ -1,6 +1,7 @@
 import { ThumbsUp, ThumbsDown, AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
-import { setFeedback } from "@/features/analysis/store";
 import { AnalysisResult } from "@/features/analysis/types";
+import { useFeedback } from "@/features/analysis/hooks/useFeedback";
+
 const labelConfig = {
   "Likely Real": {
     icon: CheckCircle2,
@@ -25,9 +26,22 @@ const labelConfig = {
 export default function ResultCard({ result }: { result: AnalysisResult }) {
   const config = labelConfig[result.label];
   const Icon = config.icon;
+  const feedbackMutation = useFeedback();
+
+  const handleFeedback = async (feedback: "up" | "down") => {
+    if (feedbackMutation.isPending || result.feedback) return;
+
+    try {
+      await feedbackMutation.mutateAsync({ id: result.id, feedback });
+    } catch {
+      // optionally add toast later
+    }
+  };
 
   return (
-    <div className={`rounded-xl border border-border bg-card p-6 space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500 ${config.glowClass}`}>
+    <div
+      className={`rounded-xl border border-border bg-card p-6 space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500 ${config.glowClass}`}
+    >
       <div className="flex items-start justify-between gap-4">
         <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium border ${config.colorClass}`}>
           <Icon className="w-4 h-4" />
@@ -60,8 +74,9 @@ export default function ResultCard({ result }: { result: AnalysisResult }) {
           <span className="text-xs text-muted-foreground mr-2">Helpful?</span>
 
           <button
-            onClick={() => setFeedback(result.id, "up")}
-            className={`p-2 rounded-lg transition-colors ${
+            onClick={() => handleFeedback("up")}
+            disabled={feedbackMutation.isPending || !!result.feedback}
+            className={`p-2 rounded-lg transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
               result.feedback === "up"
                 ? "bg-success/10 text-success"
                 : "text-muted-foreground hover:text-foreground hover:bg-secondary"
@@ -71,8 +86,9 @@ export default function ResultCard({ result }: { result: AnalysisResult }) {
           </button>
 
           <button
-            onClick={() => setFeedback(result.id, "down")}
-            className={`p-2 rounded-lg transition-colors ${
+            onClick={() => handleFeedback("down")}
+            disabled={feedbackMutation.isPending || !!result.feedback}
+            className={`p-2 rounded-lg transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
               result.feedback === "down"
                 ? "bg-danger/10 text-danger"
                 : "text-muted-foreground hover:text-foreground hover:bg-secondary"

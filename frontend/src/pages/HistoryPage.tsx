@@ -1,22 +1,12 @@
-import { useEffect, useState } from "react";
-import { Clock, Inbox } from "lucide-react";
+import { Clock, Inbox, Loader2 } from "lucide-react";
 import PageShell from "@/components/layout/PageShell";
 import HistoryResultCard from "@/components/ui/HistoryResultCard";
-import { AnalysisResult } from "@/features/analysis/types";
-import { getHistory, subscribe } from "@/features/analysis/store";
+import { useHistory } from "@/features/analysis/hooks/useHistory";
 
 export default function HistoryPage() {
-  const [history, setHistory] = useState<AnalysisResult[]>(getHistory());
+  const { data, isLoading, isError, error } = useHistory();
 
-  useEffect(() => {
-    const unsubscribe = subscribe(() => {
-      setHistory([...getHistory()]);
-    });
-
-    setHistory([...getHistory()]);
-
-    return unsubscribe;
-  }, []);
+  const history = data?.items ?? [];
 
   return (
     <PageShell className="mx-auto w-full max-w-4xl px-6 py-12">
@@ -27,11 +17,22 @@ export default function HistoryPage() {
 
         <div>
           <h1 className="text-2xl font-bold">Analysis History</h1>
-          <p className="text-sm text-muted-foreground">{history.length} saved results</p>
+          <p className="text-sm text-muted-foreground">{data?.total ?? 0} saved results</p>
         </div>
       </section>
 
-      {history.length === 0 ? (
+      {isLoading ? (
+        <section className="py-20 text-center">
+          <Loader2 className="mx-auto mb-4 h-7 w-7 animate-spin text-muted-foreground" />
+          <p className="text-muted-foreground">Loading history...</p>
+        </section>
+      ) : isError ? (
+        <section className="py-20 text-center">
+          <p className="text-danger">
+            {error instanceof Error ? error.message : "Failed to load history."}
+          </p>
+        </section>
+      ) : history.length === 0 ? (
         <section className="py-20 text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-secondary">
             <Inbox className="h-7 w-7 text-muted-foreground" />

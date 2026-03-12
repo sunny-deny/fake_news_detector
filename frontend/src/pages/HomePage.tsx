@@ -1,50 +1,37 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import PageShell from "@/components/layout/PageShell";
 import MagnifierSearch from "@/components/hero/MagnifierSearch";
 import AnalyzeForm from "@/components/ui/AnalyzeForm";
 import ResultCard from "@/components/ui/ResultCard";
-import { analyzeText, getHistory, subscribe } from "@/features/analysis/store";
 import { AnalysisResult } from "@/features/analysis/types";
+import { useAnalysis } from "@/features/analysis/hooks/useAnalysis";
+import { useHistory } from "@/features/analysis/hooks/useHistory";
 
 export default function HomePage() {
   const [text, setText] = useState("");
-  const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
-  const [historyCount, setHistoryCount] = useState(getHistory().length);
-  const [hasStarted, setHasStarted] = useState(getHistory().length > 0);
+  const [hasStarted, setHasStarted] = useState(false);
 
-  useEffect(() => {
-    const unsubscribe = subscribe(() => {
-      const count = getHistory().length;
-      setHistoryCount(count);
+  const analysisMutation = useAnalysis();
+  const { data: historyData } = useHistory();
 
-      if (count > 0) {
-        setHasStarted(true);
-      }
-    });
-
-    const count = getHistory().length;
-    setHistoryCount(count);
-
-    if (count > 0) {
-      setHasStarted(true);
-    }
-
-    return unsubscribe;
-  }, []);
+  const historyCount = historyData?.total ?? 0;
+  const loading = analysisMutation.isPending;
+  const error = analysisMutation.error instanceof Error ? analysisMutation.error.message : null;
 
   const handleAnalyze = async () => {
-    if (!text.trim() || loading) return;
+    const cleanText = text.trim();
+    if (!cleanText || loading) return;
 
-    setLoading(true);
-    setResult(null);
     setHasStarted(true);
+    setResult(null);
 
-    const analysisResult = await analyzeText(text.trim());
-
-    setResult(analysisResult);
-    setHistoryCount(getHistory().length);
-    setLoading(false);
+    try {
+      const analysisResult = await analysisMutation.mutateAsync(cleanText);
+      setResult(analysisResult);
+    } catch {
+      // error handled in UI
+    }
   };
 
   const showHero = historyCount === 0 && !loading && !result && !hasStarted;
@@ -94,13 +81,19 @@ export default function HomePage() {
             showForm ? "max-h-[400px] opacity-100" : "max-h-0 opacity-0"
           }`}
         >
-          <section className="mx-auto w-full max-w-2xl pt-2">
+          <section className="mx-auto w-full max-w-2xl pt-2 space-y-4">
             <AnalyzeForm
               value={text}
               isLoading={loading}
               onChange={setText}
               onSubmit={handleAnalyze}
             />
+
+            {error && (
+              <div className="rounded-xl border border-danger/30 bg-danger/5 px-4 py-3 text-sm text-danger">
+                {error}
+              </div>
+            )}
           </section>
         </div>
 
