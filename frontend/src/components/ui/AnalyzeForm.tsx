@@ -19,35 +19,35 @@ export default function AnalyzeForm({
   };
 
   return (
-    <section className="space-y-4">
+    <section>
       <div className="relative">
         <textarea
           value={value}
           onChange={handleChange}
           placeholder="Paste a news headline or article text here..."
-          rows={4}
-          className="w-full resize-none rounded-xl border border-border bg-card px-5 py-4 text-sm leading-relaxed text-foreground transition-all placeholder:text-muted-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/40"
+          rows={6}
+          className="w-full resize-none rounded-xl border border-border bg-card px-5 py-4 pr-36 text-sm leading-relaxed text-foreground shadow-sm transition-all placeholder:text-muted-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/40"
         />
-      </div>
 
-      <button
-        type="button"
-        onClick={onSubmit}
-        disabled={!value.trim() || isLoading}
-        className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground transition-all hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40 glow-primary"
-      >
-        {isLoading ? (
-          <>
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Analyzing...
-          </>
-        ) : (
-          <>
-            <Search className="h-4 w-4" />
-            Analyze Text
-          </>
-        )}
-      </button>
+        <button
+          type="button"
+          onClick={onSubmit}
+          disabled={!value.trim() || isLoading}
+          className="absolute bottom-3 right-3 flex h-10 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground transition-all duration-200 hover:scale-[1.03] hover:opacity-95 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40 glow-primary"
+        >
+          {isLoading ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Analyzing
+            </>
+          ) : (
+            <>
+              <Search className="h-5 w-5" />
+              Analyze
+            </>
+          )}
+        </button>
+      </div>
     </section>
   );
 }
