@@ -1,84 +1,41 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import PageShell from "@/components/layout/PageShell";
 import MagnifierSearch from "@/components/hero/MagnifierSearch";
 import AnalyzeForm from "@/components/ui/AnalyzeForm";
 import ResultCard from "@/components/ui/ResultCard";
 import { AnalysisResult } from "@/features/analysis/types";
 import { useAnalysis } from "@/features/analysis/hooks/useAnalysis";
-
-const MIN_TEXT_LENGTH = 10;
-const HERO_DISMISSED_STORAGE_KEY = "truthlens.heroDismissed";
+import { useHistory } from "@/features/analysis/hooks/useHistory";
 
 export default function HomePage() {
   const [text, setText] = useState("");
   const [result, setResult] = useState<AnalysisResult | null>(null);
-  const [hasDismissedHero, setHasDismissedHero] = useState(false);
-  const [isReady, setIsReady] = useState(false);
+  const [hasStarted, setHasStarted] = useState(false);
 
   const analysisMutation = useAnalysis();
+  const { data: historyData } = useHistory();
+
+  const historyCount = historyData?.total ?? 0;
   const loading = analysisMutation.isPending;
-  const errorMessage =
-    analysisMutation.error instanceof Error
-      ? analysisMutation.error.message
-      : null;
-
-  useEffect(() => {
-    const savedValue = window.localStorage.getItem(HERO_DISMISSED_STORAGE_KEY);
-    setHasDismissedHero(savedValue === "true");
-    setIsReady(true);
-  }, []);
-
-  const handleStart = () => {
-    setHasDismissedHero(true);
-    window.localStorage.setItem(HERO_DISMISSED_STORAGE_KEY, "true");
-  };
+  const error = analysisMutation.error instanceof Error ? analysisMutation.error.message : null;
 
   const handleAnalyze = async () => {
     const cleanText = text.trim();
+    if (!cleanText || loading) return;
 
-    if (cleanText.length < MIN_TEXT_LENGTH || loading) {
-      return;
-    }
-
-    if (!hasDismissedHero) {
-      setHasDismissedHero(true);
-      window.localStorage.setItem(HERO_DISMISSED_STORAGE_KEY, "true");
-    }
-
+    setHasStarted(true);
     setResult(null);
 
     try {
       const analysisResult = await analysisMutation.mutateAsync(cleanText);
       setResult(analysisResult);
     } catch {
-      // handled by mutation error state
+      // error handled in UI
     }
   };
 
-  if (!isReady) {
-    return (
-      <PageShell className="flex flex-1 flex-col items-center px-6 pb-16 pt-14">
-        <div className="w-full max-w-5xl space-y-10">
-          <section className="space-y-4 text-center">
-            <h1 className="text-center text-5xl font-bold tracking-tight">
-              Detect{" "}
-              <span className="bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text text-transparent">
-                Fake News
-              </span>{" "}
-              Instantly
-            </h1>
-
-            <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
-              Paste any headline or article text and analyze its credibility in seconds.
-            </p>
-          </section>
-        </div>
-      </PageShell>
-    );
-  }
-
-  const showHero = !hasDismissedHero;
-  const showForm = hasDismissedHero;
+  const showHero = historyCount === 0 && !loading && !result && !hasStarted;
+  const showForm = hasStarted || loading || !!result || historyCount > 0;
 
   return (
     <PageShell className="flex flex-1 flex-col items-center px-6 pb-16 pt-14">
@@ -111,7 +68,7 @@ export default function HomePage() {
 
             <button
               type="button"
-              onClick={handleStart}
+              onClick={() => setHasStarted(true)}
               className="glow-primary rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-all hover:opacity-90"
             >
               Get Started
@@ -121,10 +78,10 @@ export default function HomePage() {
 
         <div
           className={`overflow-hidden transition-all duration-500 ${
-            showForm ? "max-h-[420px] opacity-100" : "max-h-0 opacity-0"
+            showForm ? "max-h-[400px] opacity-100" : "max-h-0 opacity-0"
           }`}
         >
-          <section className="mx-auto w-full max-w-2xl space-y-4 pt-2">
+          <section className="mx-auto w-full max-w-2xl pt-2 space-y-4">
             <AnalyzeForm
               value={text}
               isLoading={loading}
@@ -132,9 +89,9 @@ export default function HomePage() {
               onSubmit={handleAnalyze}
             />
 
-            {errorMessage && (
+            {error && (
               <div className="rounded-xl border border-danger/30 bg-danger/5 px-4 py-3 text-sm text-danger">
-                {errorMessage}
+                {error}
               </div>
             )}
           </section>

@@ -30,7 +30,7 @@ export default function ResultCard({ result }: { result: AnalysisResult }) {
   const Icon = config.icon;
   const feedbackMutation = useFeedback();
 
-  // local state so the UI reflects immediately after clicking
+
   const [localFeedback, setLocalFeedback] = useState<"up" | "down" | null>(
     result.feedback ?? null
   );
@@ -42,7 +42,7 @@ export default function ResultCard({ result }: { result: AnalysisResult }) {
       await feedbackMutation.mutateAsync({ id: result.id, feedback });
       setLocalFeedback(feedback);
     } catch {
-      // optionally add toast later
+
     }
   };
 
