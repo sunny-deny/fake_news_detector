@@ -13,8 +13,8 @@ export async function analyzeNews(text: string): Promise<AnalyzeResponseDto> {
   });
 }
 
-export async function fetchHistory(limit = 50, offset = 0): Promise<HistoryResponseDto> {
-  return apiFetch<HistoryResponseDto>(`/history?limit=${limit}&offset=${offset}`);
+export async function fetchHistory(page: number, limit: number): Promise<HistoryResponseDto> {
+  return apiFetch<HistoryResponseDto>(`/history?page=${page}&limit=${limit}`);
 }
 
 export async function submitFeedback(payload: FeedbackRequestDto): Promise<FeedbackResponseDto> {

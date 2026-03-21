@@ -286,17 +286,20 @@ def submit_feedback(request: Request, req: FeedbackRequest, db: Session = Depend
 
 @app.get("/history", response_model=HistoryResponse, tags=["History"])
 @limiter.limit(RATE_LIMIT_HISTORY)
-def get_history(request: Request, limit: int = Query(50, ge=1, le=100), offset: int = Query(0, ge=0), db: Session = Depends(get_db)):
+def get_history(
+    request: Request,
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1, le=100),
+    db: Session = Depends(get_db)
+):
     """
-    Get analysis history.
-    
-    Returns recent analyses with pagination support.
+    Get analysis history with pagination.
     """
     try:
-        # Get total count
         total = db.query(Analysis).count()
-        
-        # Get paginated results
+        offset = (page - 1) * limit
+        total_pages = -(-total // limit)  # ceiling division
+
         analyses = (
             db.query(Analysis)
             .order_by(Analysis.created_at.desc())
@@ -304,20 +307,18 @@ def get_history(request: Request, limit: int = Query(50, ge=1, le=100), offset: 
             .limit(limit)
             .all()
         )
-        
+
         items = []
         for a in analyses:
-            # Truncate text for history view
             display_text = a.text[:200] + "..." if len(a.text) > 200 else a.text
-            
-            # Determine confidence
+
             if a.score > 0.8 or a.score < 0.2:
                 confidence = "High"
             elif 0.6 < a.score < 0.8 or 0.2 < a.score < 0.4:
                 confidence = "Medium"
             else:
                 confidence = "Low"
-            
+
             items.append(HistoryItem(
                 id=a.id,
                 text=display_text,
@@ -327,17 +328,22 @@ def get_history(request: Request, limit: int = Query(50, ge=1, le=100), offset: 
                 created_at=a.created_at,
                 user_feedback=a.user_feedback
             ))
-        
-        return HistoryResponse(total=total, items=items)
-        
+
+        return HistoryResponse(
+            total=total,
+            page=page,
+            limit=limit,
+            total_pages=total_pages,
+            items=items
+        )
+
     except Exception as e:
         logger.error(f"Error fetching history: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to fetch history: {str(e)}"
         )
-
-
+        
 @app.get("/stats", response_model=StatsResponse, tags=["Statistics"])
 @limiter.limit(RATE_LIMIT_STATS)
 def get_statistics(request: Request, db: Session = Depends(get_db)):
