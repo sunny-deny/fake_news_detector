@@ -35,7 +35,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from slowapi import _rate_limit_exceeded_handler
 
-from .security import sanitize_text
+from .security import sanitize_text, is_meaningful_text
 
 
 from .database import get_db, init_db, engine
@@ -192,6 +192,12 @@ def analyze_news(request: Request, req: AnalyzeRequest, db: Session = Depends(ge
     clean = sanitize_text(req.text, max_chars=10000)
     if not clean:
         raise HTTPException(status_code=400, detail="Empty input after sanitization")
+
+    if not is_meaningful_text(clean):
+        raise HTTPException(
+            status_code=422,
+            detail="Text does not appear to be a valid news article. Please provide real article text."
+            )
 
     try:
         enc = tokenizer(
