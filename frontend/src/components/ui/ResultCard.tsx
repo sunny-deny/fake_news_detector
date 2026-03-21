@@ -1,6 +1,8 @@
 import { ThumbsUp, ThumbsDown, AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
+import { useState } from "react";
 import { AnalysisResult } from "@/features/analysis/types";
 import { useFeedback } from "@/features/analysis/hooks/useFeedback";
+import { formatTimestamp } from "@/utils/formatTimestamp";
 
 const labelConfig = {
   "Likely Real": {
@@ -28,11 +30,17 @@ export default function ResultCard({ result }: { result: AnalysisResult }) {
   const Icon = config.icon;
   const feedbackMutation = useFeedback();
 
+  // local state so the UI reflects immediately after clicking
+  const [localFeedback, setLocalFeedback] = useState<"up" | "down" | null>(
+    result.feedback ?? null
+  );
+
   const handleFeedback = async (e: React.MouseEvent, feedback: "up" | "down") => {
     e.stopPropagation();
-    if (feedbackMutation.isPending || result.feedback) return;
+    if (feedbackMutation.isPending || localFeedback) return;
     try {
       await feedbackMutation.mutateAsync({ id: result.id, feedback });
+      setLocalFeedback(feedback);
     } catch {
       // optionally add toast later
     }
@@ -40,38 +48,54 @@ export default function ResultCard({ result }: { result: AnalysisResult }) {
 
   return (
     <div
-      className={`rounded-xl border border-border bg-card p-6 space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500 ${config.glowClass}`}
+      className={`w-full rounded-2xl border border-border bg-card p-5 sm:p-6 space-y-4 transition-all duration-300 ${config.glowClass}`}
     >
-      <div className="flex items-start justify-between gap-4">
+      {/* Header */}
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium border ${config.colorClass}`}>
-          <Icon className="w-4 h-4" />
+          <Icon className="w-4 h-4 shrink-0" />
           {result.label}
         </div>
-        <div className="text-right">
+        <div className="text-right shrink-0">
           <span className="text-2xl font-bold font-mono text-foreground">{result.score}%</span>
           <p className="text-xs text-muted-foreground mt-0.5">confidence</p>
         </div>
       </div>
-      <div className="w-full h-2 rounded-full bg-secondary overflow-hidden">
+
+      {/* Score bar */}
+      <div className="w-full h-1.5 rounded-full bg-secondary overflow-hidden">
         <div
           className={`h-full rounded-full transition-all duration-1000 ease-out ${config.barClass}`}
           style={{ width: `${result.score}%` }}
         />
       </div>
-      <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
+
+      {/* Full text */}
+      <p className="text-sm text-muted-foreground leading-relaxed break-words">
         "{result.text}"
       </p>
-      <div className="flex items-center justify-between pt-2 border-t border-border/50">
-        <span className="text-xs text-muted-foreground font-mono">
-          {result.timestamp.toLocaleString()}
+
+      {/* Footer */}
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-border/50">
+        <span
+          className="text-xs text-muted-foreground"
+          title={result.timestamp.toLocaleString(undefined, {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+        >
+          {formatTimestamp(result.timestamp)}
         </span>
         <div className="flex items-center gap-1">
-          <span className="text-xs text-muted-foreground mr-2">Helpful?</span>
+          <span className="text-xs text-muted-foreground mr-1">Helpful?</span>
           <button
             onClick={(e) => handleFeedback(e, "up")}
-            disabled={feedbackMutation.isPending || !!result.feedback}
-            className={`p-2 rounded-lg transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-              result.feedback === "up"
+            disabled={feedbackMutation.isPending || !!localFeedback}
+            className={`p-2 rounded-lg transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50 hover:scale-110 active:scale-95 ${
+              localFeedback === "up"
                 ? "bg-success/10 text-success"
                 : "text-muted-foreground hover:text-foreground hover:bg-secondary"
             }`}
@@ -80,9 +104,9 @@ export default function ResultCard({ result }: { result: AnalysisResult }) {
           </button>
           <button
             onClick={(e) => handleFeedback(e, "down")}
-            disabled={feedbackMutation.isPending || !!result.feedback}
-            className={`p-2 rounded-lg transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-              result.feedback === "down"
+            disabled={feedbackMutation.isPending || !!localFeedback}
+            className={`p-2 rounded-lg transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50 hover:scale-110 active:scale-95 ${
+              localFeedback === "down"
                 ? "bg-danger/10 text-danger"
                 : "text-muted-foreground hover:text-foreground hover:bg-secondary"
             }`}

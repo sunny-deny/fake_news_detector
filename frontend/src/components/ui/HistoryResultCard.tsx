@@ -2,6 +2,7 @@ import { useState } from "react";
 import { AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
 import ResultCard from "@/components/ui/ResultCard";
 import { AnalysisResult } from "@/features/analysis/types";
+import { formatTimestamp } from "@/utils/formatTimestamp";
 
 const labelConfig = {
   "Likely Real": {
@@ -29,14 +30,8 @@ export default function HistoryResultCard({ result }: HistoryResultCardProps) {
 
   if (isExpanded) {
     return (
-      <div
-        onClick={() => setIsExpanded(false)}
-        className="cursor-pointer"
-      >
-        <ResultCard
-          result={result}
-          onThumbClick={(e) => e.stopPropagation()}
-        />
+      <div onClick={() => setIsExpanded(false)} className="cursor-pointer">
+        <ResultCard result={result} onThumbClick={(e) => e.stopPropagation()} />
       </div>
     );
   }
@@ -53,13 +48,21 @@ export default function HistoryResultCard({ result }: HistoryResultCardProps) {
             <Icon className={`h-5 w-5 ${config.badgeClass}`} />
           </div>
           <div className="min-w-0">
-            <p className="truncate text-lg font-semibold text-foreground">
+            <p className="truncate text-sm font-semibold text-foreground">
               {result.text}
             </p>
-            <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-              <span>{result.timestamp.toLocaleDateString()}</span>
-              <span>•</span>
-              <span>{result.timestamp.toLocaleTimeString()}</span>
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              <span
+                title={result.timestamp.toLocaleString(undefined, {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              >
+                {formatTimestamp(result.timestamp)}
+              </span>
               <span>•</span>
               <span>{result.score}%</span>
             </div>
