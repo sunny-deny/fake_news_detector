@@ -29,8 +29,14 @@ export default function HistoryResultCard({ result }: HistoryResultCardProps) {
 
   if (isExpanded) {
     return (
-      <div onClick={() => setIsExpanded(false)} className="cursor-pointer">
-        <ResultCard result={result} />
+      <div
+        onClick={() => setIsExpanded(false)}
+        className="cursor-pointer"
+      >
+        <ResultCard
+          result={result}
+          onThumbClick={(e) => e.stopPropagation()}
+        />
       </div>
     );
   }
@@ -46,12 +52,10 @@ export default function HistoryResultCard({ result }: HistoryResultCardProps) {
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/5">
             <Icon className={`h-5 w-5 ${config.badgeClass}`} />
           </div>
-
           <div className="min-w-0">
             <p className="truncate text-lg font-semibold text-foreground">
               {result.text}
             </p>
-
             <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
               <span>{result.timestamp.toLocaleDateString()}</span>
               <span>•</span>
@@ -61,7 +65,6 @@ export default function HistoryResultCard({ result }: HistoryResultCardProps) {
             </div>
           </div>
         </div>
-
         <div className="pointer-events-none flex w-[120px] shrink-0 items-center justify-end">
           <span
             className={`text-sm font-semibold uppercase tracking-wide transition-all duration-300 opacity-0 translate-x-2 group-hover:translate-x-0 group-hover:opacity-100 ${config.badgeClass}`}

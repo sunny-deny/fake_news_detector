@@ -28,9 +28,9 @@ export default function ResultCard({ result }: { result: AnalysisResult }) {
   const Icon = config.icon;
   const feedbackMutation = useFeedback();
 
-  const handleFeedback = async (feedback: "up" | "down") => {
+  const handleFeedback = async (e: React.MouseEvent, feedback: "up" | "down") => {
+    e.stopPropagation();
     if (feedbackMutation.isPending || result.feedback) return;
-
     try {
       await feedbackMutation.mutateAsync({ id: result.id, feedback });
     } catch {
@@ -47,34 +47,28 @@ export default function ResultCard({ result }: { result: AnalysisResult }) {
           <Icon className="w-4 h-4" />
           {result.label}
         </div>
-
         <div className="text-right">
           <span className="text-2xl font-bold font-mono text-foreground">{result.score}%</span>
           <p className="text-xs text-muted-foreground mt-0.5">confidence</p>
         </div>
       </div>
-
       <div className="w-full h-2 rounded-full bg-secondary overflow-hidden">
         <div
           className={`h-full rounded-full transition-all duration-1000 ease-out ${config.barClass}`}
           style={{ width: `${result.score}%` }}
         />
       </div>
-
       <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
         "{result.text}"
       </p>
-
       <div className="flex items-center justify-between pt-2 border-t border-border/50">
         <span className="text-xs text-muted-foreground font-mono">
           {result.timestamp.toLocaleString()}
         </span>
-
         <div className="flex items-center gap-1">
           <span className="text-xs text-muted-foreground mr-2">Helpful?</span>
-
           <button
-            onClick={() => handleFeedback("up")}
+            onClick={(e) => handleFeedback(e, "up")}
             disabled={feedbackMutation.isPending || !!result.feedback}
             className={`p-2 rounded-lg transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
               result.feedback === "up"
@@ -84,9 +78,8 @@ export default function ResultCard({ result }: { result: AnalysisResult }) {
           >
             <ThumbsUp className="w-4 h-4" />
           </button>
-
           <button
-            onClick={() => handleFeedback("down")}
+            onClick={(e) => handleFeedback(e, "down")}
             disabled={feedbackMutation.isPending || !!result.feedback}
             className={`p-2 rounded-lg transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
               result.feedback === "down"
