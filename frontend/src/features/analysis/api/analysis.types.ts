@@ -24,6 +24,9 @@ export interface HistoryItemDto {
 
 export interface HistoryResponseDto {
   total: number;
+  page: number;
+  limit: number;
+  total_pages: number;
   items: HistoryItemDto[];
 }
 
