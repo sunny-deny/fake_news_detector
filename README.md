@@ -1,265 +1,361 @@
 # AI Fake News Detector
 
-An end-to-end machine learning project for detecting fake news using a
-fine-tuned DistilBERT model.
+An end-to-end machine learning system that detects fake news using a fine-tuned DistilBERT model, exposed through a FastAPI backend and a React frontend.
 
-------------------------------------------------------------------------
+The project demonstrates the full lifecycle of an ML product:
 
-## Overview
+- Data cleaning and preprocessing
+- Transformer model training
+- Model evaluation
+- Production inference API
+- Persistent storage
+- User feedback collection
+- Full-stack web interface
+- Dockerized development environment
 
-This project covers:
+---
 
--   Data cleaning and preprocessing\
--   Dataset inspection\
--   Transformer model training\
--   Validation and test evaluation\
--   Reproducible project structure\
--   Git-based workflow
+## Project Goal
 
-------------------------------------------------------------------------
+The goal of this project is to build a production-style ML application that allows users to analyze news text and estimate whether it is **REAL** or **FAKE** using a transformer model.
+
+Users can:
+
+- Paste article text or headlines
+- Run ML inference in real time
+- View confidence scores
+- Submit feedback
+- Explore analysis history
+- View system statistics
+
+This project focuses on clean architecture, reproducibility, and full-stack ML engineering practices.
+
+---
+
+## System Architecture
+
+```
+React Frontend
+      │
+      ▼
+FastAPI Backend
+      │
+      ▼
+ML Model (DistilBERT)
+      │
+      ▼
+PostgreSQL Database
+```
+
+### Components
+
+**Frontend**
+- React
+- TypeScript
+- Vite
+- React Query
+- TailwindCSS
+
+**Backend**
+- FastAPI
+- PyTorch
+- Transformers
+- SQLAlchemy
+- PostgreSQL
+
+**Infrastructure**
+- Docker
+- Docker Compose
+
+---
 
 ## Project Structure
 
-    fake-news-detector/
-    │
-    ├── data/
-    │   ├── raw/          # Original dataset (ignored)
-    │   └── processed/    # Cleaned + split data (ignored)
-    │
-    ├── scripts/
-    │   ├── clean_data.py     # Data cleaning and splitting
-    │   └── inspect_data.py   # Dataset inspection
-    │
-    ├── src/
-    │   └── fakey/
-    │       └── models/
-    │           ├── train.py     # Model training
-    │           └── evaluate.py  # Test evaluation
-    │
-    ├── models/        # Trained artifacts (ignored)
-    ├── notebooks/     # Optional analysis notebooks
-    ├── tests/         # Future tests
-    │
-    ├── requirements.txt
-    ├── .gitignore
-    └── README.md
+```
+fake_news_detector/
 
-------------------------------------------------------------------------
-
-## Requirements
-
--   Python 3.10+
-
-Install dependencies:
-
-``` powershell
-pip install -r requirements.txt
+├── backend/
+│   ├── app/
+│   │   ├── main.py           # FastAPI application
+│   │   ├── database.py
+│   │   ├── models.py
+│   │   ├── schemas.py
+│   │   ├── security.py
+│   │   └── routers/
+│   │
+│   ├── requirements.txt
+│
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── hero/
+│   │   │   ├── layout/
+│   │   │   └── ui/
+│   │   │
+│   │   ├── features/
+│   │   │   └── analysis/
+│   │   │
+│   │   ├── pages/
+│   │   │   ├── HomePage.tsx
+│   │   │   └── HistoryPage.tsx
+│   │   │
+│   │   └── lib/
+│   │       └── api/
+│   │           └── client.ts
+│   │
+│   ├── package.json
+│
+├── data/
+│   ├── raw/
+│   └── processed/
+│
+├── models/
+│   └── baseline/
+│
+├── scripts/
+│   ├── clean_data.py
+│   └── inspect_data.py
+│
+├── docker-compose.yml
+├── README.md
+└── requirements.txt
 ```
 
-Main libraries:
+---
 
--   pandas\
--   numpy\
--   scikit-learn\
--   transformers\
--   torch\
--   accelerate\
--   datasets\
--   tqdm\
--   jupyter
+## Features
 
-------------------------------------------------------------------------
+### News Analysis
+
+Users can submit news text to the system. The backend:
+
+- tokenizes the text
+- runs inference using DistilBERT
+- returns:
+  - `REAL` / `FAKE`
+  - confidence score
+  - prediction probability
+
+### History Tracking
+
+All predictions are stored in PostgreSQL. Users can view:
+
+- previous analyses
+- prediction scores
+- timestamps
+- feedback status
+
+### User Feedback
+
+Users can mark predictions as:
+
+- correct
+- incorrect
+
+Feedback is stored for future model improvement.
+
+### Statistics
+
+The API exposes aggregated metrics:
+
+- total analyses
+- fake vs real distribution
+- average confidence
+- feedback accuracy
+
+### Rate Limiting
+
+API endpoints are protected using SlowAPI. Example limits:
+
+```
+/analyze  → 10 requests / minute
+/feedback → 20 requests / minute
+/history  → 30 requests / minute
+```
+
+---
 
 ## Dataset
 
-This project uses the WELFake / Kaggle fake news dataset.
+The project uses the [WELFake dataset](https://zenodo.org/record/4561253).
 
-Place the raw CSV file in:
+Place the raw CSV in:
 
-    data/raw/WELFake_Dataset.csv
+```
+data/raw/WELFake_Dataset.csv
+```
 
-This file is ignored by Git.
+> The dataset is not committed to Git.
 
-------------------------------------------------------------------------
+---
 
-## Data Cleaning and Splitting
+## Data Cleaning
 
-Clean, deduplicate, cap length, and split the dataset:
+Run:
 
-``` bash
+```bash
 python scripts/clean_data.py
 ```
 
+This step:
+
+- removes duplicates
+- removes missing values
+- merges title + article
+- caps text length
+- creates stratified splits
+
 Output:
 
-    data/processed/
-    ├── welfake_clean.csv
-    ├── train.csv
-    ├── val.csv
-    └── test.csv
-
-Features:
-
--   Removes duplicates\
--   Drops missing text\
--   Combines title + article\
--   Caps max length\
--   Stratified train/val/test split
-
-------------------------------------------------------------------------
-
-## Dataset Inspection
-
-Check data quality and statistics:
-
-``` bash
-python scripts/inspect_data.py
+```
+data/processed/
+    train.csv
+    val.csv
+    test.csv
 ```
 
-Outputs:
-
--   Shape\
--   Label distribution\
--   Length statistics\
--   Random samples
-
-------------------------------------------------------------------------
+---
 
 ## Model Training
 
-Baseline model: DistilBERT
+Baseline model: **DistilBERT**
 
-Train on CPU:
+Train locally:
 
-``` bash
-python src/fakey/models/train.py --epochs 1 --batch_size 8 --max_length 256
-```
-
-Faster run (recommended for CPU):
-
-``` bash
-python src/fakey/models/train.py --epochs 1 --batch_size 8 --max_length 128
+```bash
+python src/fakey/models/train.py \
+  --epochs 1 \
+  --batch_size 8 \
+  --max_length 256
 ```
 
 Outputs:
 
-    models/baseline/
-    ├── model.safetensors
-    ├── config.json
-    ├── tokenizer.json
-    ├── tokenizer_config.json
-    └── metrics.json
-
-------------------------------------------------------------------------
-
-## Test Evaluation
-
-Evaluate on the held-out test set:
-
-``` bash
-python src/fakey/models/evaluate.py \
-  --model_dir models/baseline \
-  --test_path data/processed/test.csv \
-  --max_length 256 \
-  --batch_size 16
+```
+models/baseline/
+    model.safetensors
+    config.json
+    tokenizer.json
+    metrics.json
 ```
 
-Results are printed and saved to:
+---
 
-    models/baseline/test_metrics.json
+## Model Evaluation
 
-------------------------------------------------------------------------
+Run:
 
-## Baseline Results
+```bash
+python src/fakey/models/evaluate.py \
+  --model_dir models/baseline \
+  --test_path data/processed/test.csv
+```
 
-Validation (after 1 epoch):
+### Baseline Results
 
--   Accuracy: \~99.35%\
--   F1: \~99.29%
+**Validation:**
 
-Test set:
+| Metric | Score |
+|--------|-------|
+| Accuracy | 99.35% |
+| F1 Score | 99.29% |
 
--   Accuracy: \~99.19%\
--   Precision: \~98.99%\
--   Recall: \~99.23%\
--   F1: \~99.11%
+**Test:**
 
-These results show strong generalization on WELFake.
+| Metric | Score |
+|--------|-------|
+| Accuracy | 99.19% |
+| Precision | 98.99% |
+| Recall | 99.23% |
+| F1 Score | 99.11% |
 
-------------------------------------------------------------------------
+---
 
+## Running the Application
 
-## GPU Training (Google Colab)
+### Start the backend
 
-For faster training, this project supports GPU-accelerated training using
-Google Colab.
+```bash
+docker compose up
+```
 
-A ready-to-use notebook is provided:
+- API: [http://localhost:8000](http://localhost:8000)
+- Docs: [http://localhost:8000/docs](http://localhost:8000/docs)
 
-    notebooks/02_colab_training.ipynb
+### Start the frontend
 
-Features:
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
--   Runs on Tesla T4 GPU (or similar)
--   ~20× faster than local CPU training
--   Reproducible environment setup
--   Automatic model and metrics export
+- Frontend: [http://localhost:5173](http://localhost:5173)
 
-Workflow:
+---
 
-1. Open the notebook in Google Colab
-2. Enable GPU runtime
-3. Upload train/val/test CSV files
-4. Run all cells
-5. Download trained artifacts
+## API Endpoints
 
-This enables full cloud-based training without local hardware requirements.
+```
+POST    /analyze
+POST    /feedback
+GET     /history
+GET     /stats
+GET     /health
+DELETE  /history/{id}
+```
 
-------------------------------------------------------------------------
+---
 
-## Git Workflow
+## Development Workflow
 
-Branches:
+**Git branching strategy:**
 
--   main -- stable releases\
--   dev -- integration\
--   feat/\* -- features
+```
+main  → stable releases
+dev   → integration branch
+feat/* → feature development
+fix/*  → bug fixes
+```
 
-Workflow:
+**Workflow:**
 
-    feat/* → dev → main
+```
+feature branch
+      ↓
+     dev
+      ↓
+    main
+```
 
-Artifacts and datasets are ignored. Only source code is tracked.
-
-------------------------------------------------------------------------
+---
 
 ## Reproducibility
 
-All experiments are reproducible using:
+The project is fully reproducible with:
 
--   requirements.txt\
--   clean_data.py\
--   train.py\
--   evaluate.py
+- `requirements.txt`
+- data cleaning scripts
+- training scripts
+- docker environment
 
-No trained models or raw data are committed.
+> No datasets or trained models are committed.
 
-------------------------------------------------------------------------
+---
 
-## Future Work
+## Future Improvements
 
-Planned extensions:
+Planned improvements:
+- [ ] Active learning from user feedback
+- [ ] Experiment tracking
+- [ ] CI/CD pipeline
+- [ ] Cloud deployment
+- [ ] Monitoring and logging
+- [ ] Model optimization for faster inference
+- [ ] User authentication
 
--   FastAPI backend\
--   Web frontend\
--   User query database\
--   Feedback-based retraining\
--   Experiment tracking\
--   GPU training\
--   Model optimization
+---
 
-------------------------------------------------------------------------
+## License
 
-## Author
-
-Built as a portfolio project for applied NLP and ML engineering.
+[MIT License](LICENSE)

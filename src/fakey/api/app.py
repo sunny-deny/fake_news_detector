@@ -30,9 +30,11 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
-from .security import sanitize_text
-from .database import get_db, init_db
-from .models import Analysis, Feedback
+from .security import sanitize_text, is_meaningful_text
+
+
+from .database import get_db, init_db, engine
+from .models import Analysis, Feedback, ModelMetrics
 from .schemas import (
     AnalyzeRequest,
     AnalyzeResponse,
@@ -242,6 +244,12 @@ def analyze_news(request: Request, req: AnalyzeRequest, db: Session = Depends(ge
     if not clean:
         raise HTTPException(status_code=400, detail="Empty input after sanitization")
 
+    if not is_meaningful_text(clean):
+        raise HTTPException(
+            status_code=422,
+            detail="Text does not appear to be a valid news article. Please provide real article text."
+            )
+
     try:
         enc = tokenizer(
             clean,
@@ -335,15 +343,17 @@ def submit_feedback(request: Request, req: FeedbackRequest, db: Session = Depend
 @limiter.limit(RATE_LIMIT_HISTORY)
 def get_history(
     request: Request,
-    limit: int = Query(20, ge=1, le=100),
-    offset: int = Query(0, ge=0),
-    db: Session = Depends(get_db),
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1, le=100),
+    db: Session = Depends(get_db)
 ):
     """
-    Get analysis history with pagination support.
+    Get analysis history with pagination.
     """
     try:
         total = db.query(Analysis).count()
+        offset = (page - 1) * limit
+        total_pages = -(-total // limit)  # ceiling division
 
         analyses = (
             db.query(Analysis)
@@ -356,21 +366,31 @@ def get_history(
         items = []
         for a in analyses:
             display_text = a.text[:200] + "..." if len(a.text) > 200 else a.text
-            confidence = get_confidence_from_score_and_label(a.score, a.label)
 
-            items.append(
-                HistoryItem(
-                    id=a.id,
-                    text=display_text,
-                    label_text="REAL" if a.label == 1 else "FAKE",
-                    score=a.score,
-                    confidence=confidence,
-                    created_at=a.created_at,
-                    user_feedback=a.user_feedback,
-                )
-            )
+            if a.score > 0.8 or a.score < 0.2:
+                confidence = "High"
+            elif 0.6 < a.score < 0.8 or 0.2 < a.score < 0.4:
+                confidence = "Medium"
+            else:
+                confidence = "Low"
 
-        return HistoryResponse(total=total, items=items)
+            items.append(HistoryItem(
+                id=a.id,
+                text=display_text,
+                label_text="REAL" if a.label == 1 else "FAKE",
+                score=a.score,
+                confidence=confidence,
+                created_at=a.created_at,
+                user_feedback=a.user_feedback
+            ))
+
+        return HistoryResponse(
+            total=total,
+            page=page,
+            limit=limit,
+            total_pages=total_pages,
+            items=items
+        )
 
     except Exception as e:
         logger.error("Error fetching history: %s", e, exc_info=True)
@@ -378,8 +398,7 @@ def get_history(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to fetch history",
         )
-
-
+        
 @app.get("/stats", response_model=StatsResponse, tags=["Statistics"])
 @limiter.limit(RATE_LIMIT_STATS)
 def get_statistics(request: Request, db: Session = Depends(get_db)):
