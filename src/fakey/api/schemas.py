@@ -68,6 +68,9 @@ class HistoryItem(BaseModel):
 class HistoryResponse(BaseModel):
     """Response schema for history endpoint."""
     total: int
+    page: int
+    limit: int
+    total_pages: int
     items: List[HistoryItem]
 
 

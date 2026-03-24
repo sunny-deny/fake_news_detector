@@ -1,3 +1,31 @@
+# dependencies
+node_modules/
+frontend/node_modules/
+
+# production build
+dist/
+build/
+frontend/dist/
+
+# environment variables
+.env
+.env.local
+.env.*
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# editor files
+.vscode/
+.idea/
+
 # Data
 data/raw/
 data/processed/
@@ -5,8 +33,10 @@ data/processed/
 # Python
 __pycache__/
 *.pyc
+*.pyo
+*.egg-info/
 .venv/
-.env
+venv/
 
 # Jupyter
 .ipynb_checkpoints/
@@ -14,3 +44,22 @@ __pycache__/
 # Models
 /models/
 runs/
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+.pytest_cache/
+test.db
+*.db
+*.sqlite3
+
+# TypeScript
+*.tsbuildinfo
+
+# Vite
+.vite/
+frontend/.vite/
+
+# misc
+.mypy_cache/
