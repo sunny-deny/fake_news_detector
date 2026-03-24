@@ -22,4 +22,6 @@ def is_meaningful_text(text: str, min_words: int = 5, min_avg_word_len: float = 
     unique_ratio = len(set(text.lower())) / len(text)
     if unique_ratio < 0.05:
         return False
+    if any(len(set(w)) == 1 for w in words):
+        return False
     return True
